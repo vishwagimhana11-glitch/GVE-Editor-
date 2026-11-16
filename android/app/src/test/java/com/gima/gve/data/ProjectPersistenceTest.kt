@@ -13,6 +13,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -110,6 +111,7 @@ class ProjectPersistenceTest {
             clockMs = { 1_700_000_000_500L }
         )
         coordinator.observe(stateFlow)
+        runCurrent()
 
         val addedClip = MediaClip(
             id = "clip-auto-1",

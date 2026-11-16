@@ -45,6 +45,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -419,6 +420,9 @@ private fun ClipBlock(
 
     var dragAccumulatedPx by remember(clip.id) { mutableFloatStateOf(0f) }
     var dragOriginStartMs by remember(clip.id) { androidx.compose.runtime.mutableLongStateOf(clip.timelineStartMs) }
+    val latestClip by rememberUpdatedState(clip)
+    val latestOnSelect by rememberUpdatedState(onSelect)
+    val latestOnDragMove by rememberUpdatedState(onDragMove)
 
     val fillColor = when (clip.mediaType) {
         MediaType.VIDEO -> GveColors.TrackVideo
@@ -437,24 +441,28 @@ private fun ClipBlock(
             .clip(RoundedCornerShape(8.dp))
             .background(fillColor)
             .border(if (isSelected) 2.dp else 1.dp, borderColor, RoundedCornerShape(8.dp))
-            .clickable(onClick = onSelect)
+            .clickable { latestOnSelect() }
             .pointerInput(clip.id, trackLocked, pxPerSecPx) {
                 if (trackLocked) return@pointerInput
                 detectDragGesturesAfterLongPress(
                     onDragStart = {
-                        onSelect()
+                        latestOnSelect()
                         dragAccumulatedPx = 0f
-                        dragOriginStartMs = clip.timelineStartMs
+                        dragOriginStartMs = latestClip.timelineStartMs
                     },
                     onDrag = { change, dragAmount ->
                         change.consume()
                         dragAccumulatedPx += dragAmount.x
                         val deltaMs = ((dragAccumulatedPx / pxPerSecPx) * 1000f).roundToLong()
-                        onDragMove((dragOriginStartMs + deltaMs).coerceAtLeast(0L), true)
+                        latestOnDragMove((dragOriginStartMs + deltaMs).coerceAtLeast(0L), true)
                     },
                     onDragEnd = {
                         val deltaMs = ((dragAccumulatedPx / pxPerSecPx) * 1000f).roundToLong()
-                        onDragMove((dragOriginStartMs + deltaMs).coerceAtLeast(0L), false)
+                        latestOnDragMove((dragOriginStartMs + deltaMs).coerceAtLeast(0L), false)
+                    },
+                    onDragCancel = {
+                        val deltaMs = ((dragAccumulatedPx / pxPerSecPx) * 1000f).roundToLong()
+                        latestOnDragMove((dragOriginStartMs + deltaMs).coerceAtLeast(0L), false)
                     }
                 )
             }

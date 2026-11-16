@@ -48,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -429,6 +430,7 @@ private fun VolumeToolPanel(
         Text("Select a clip to adjust audio gain.", fontSize = 12.sp, color = GveColors.TextMuted)
         return
     }
+    val latestClip by rememberUpdatedState(clip)
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -443,7 +445,8 @@ private fun VolumeToolPanel(
         )
         Slider(
             value = clip.volume,
-            onValueChange = { vol -> onVolumeChange(vol, clip.isMuted, true) },
+            onValueChange = { vol -> onVolumeChange(vol, latestClip.isMuted, true) },
+            onValueChangeFinished = { onVolumeChange(latestClip.volume, latestClip.isMuted, false) },
             valueRange = 0f..2f,
             modifier = Modifier.weight(1f),
             colors = SliderDefaults.colors(

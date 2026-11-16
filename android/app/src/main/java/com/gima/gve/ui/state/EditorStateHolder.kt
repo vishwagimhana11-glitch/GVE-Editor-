@@ -429,25 +429,34 @@ class EditorStateHolder(
         )
     }
 
+    fun endGesture() {
+        historyManager.endCoalescing()
+    }
+
     fun moveClip(clipId: String, targetTrackId: String, newStartMs: Long, isDragging: Boolean = false) {
         executeCommand(
             command = MoveClipCommand(clipId, targetTrackId, newStartMs),
-            allowCoalesce = isDragging
+            allowCoalesce = true
         )
+        if (!isDragging) {
+            historyManager.endCoalescing()
+        }
     }
 
     fun deleteSelectedClip(ripple: Boolean = false) {
         val clipId = _uiState.value.selectedClipId ?: return
         executeCommand(DeleteClipCommand(clipId = clipId, ripple = ripple))
-        _uiState.update { it.copy(selectedClipId = null) }
     }
 
     fun setSelectedClipVolume(volume: Float, isMuted: Boolean, isDragging: Boolean = false) {
         val clipId = _uiState.value.selectedClipId ?: return
         executeCommand(
             command = UpdateClipVolumeCommand(clipId = clipId, volume = volume, isMuted = isMuted),
-            allowCoalesce = isDragging
+            allowCoalesce = true
         )
+        if (!isDragging) {
+            historyManager.endCoalescing()
+        }
     }
 
     fun setSelectedClipSpeed(speed: Float) {

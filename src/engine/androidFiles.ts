@@ -22,6 +22,7 @@ import timelineEngineTestKt from '../../android/app/src/test/java/com/gima/gve/d
 import projectPersistenceTestKt from '../../android/app/src/test/java/com/gima/gve/data/ProjectPersistenceTest.kt?raw';
 import editorStateHolderTestKt from '../../android/app/src/test/java/com/gima/gve/ui/EditorStateHolderTest.kt?raw';
 import appBuildGradle from '../../android/app/build.gradle.kts?raw';
+import proguardRulesPro from '../../android/app/proguard-rules.pro?raw';
 import libsVersionsToml from '../../android/gradle/libs.versions.toml?raw';
 import rootBuildGradle from '../../android/build.gradle.kts?raw';
 import settingsGradle from '../../android/settings.gradle.kts?raw';
@@ -255,6 +256,15 @@ export const ANDROID_SOURCE_FILES: AndroidSourceFile[] = [
     language: 'kotlin',
     summary: 'Android application Gradle module with Compose BOM, Media3 1.8.0, Lifecycle Compose, and kotlinx.serialization.',
     content: appBuildGradle,
+  },
+  {
+    id: 'proguard-rules',
+    name: 'proguard-rules.pro',
+    path: 'app/proguard-rules.pro',
+    layer: 'Gradle',
+    language: 'toml',
+    summary: 'Release R8 / ProGuard keep rules placeholder referenced by app/build.gradle.kts.',
+    content: proguardRulesPro,
   },
   {
     id: 'libs-versions',

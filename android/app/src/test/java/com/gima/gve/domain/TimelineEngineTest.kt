@@ -5,6 +5,7 @@ import com.gima.gve.domain.engine.TimelineEngine
 import com.gima.gve.domain.engine.TimelineError
 import com.gima.gve.domain.engine.TimelineOperationResult
 import com.gima.gve.domain.history.EditHistoryManager
+import com.gima.gve.domain.history.MoveClipCommand
 import com.gima.gve.domain.history.SplitClipCommand
 import com.gima.gve.domain.history.TrimClipHeadCommand
 import com.gima.gve.domain.history.TrimClipTailCommand
@@ -331,5 +332,49 @@ class TimelineEngineTest {
         assertFalse(project.findTrack("track-ov1")!!.isVisible)
 
         project.validateIntegrity()
+    }
+
+    @Test
+    fun `endCoalescing keeps two separate drag gestures as two undo entries`() {
+        val base = engine.createEmptyProject("Drag Coalesce", projectId = "proj-drag")
+        val clip = sampleClip(id = "c-drag", timelineStartMs = 0L, durationMs = 2_000L)
+        val initial = (engine.addClip(base, clip) as TimelineOperationResult.Success).value
+
+        val history = EditHistoryManager(engine)
+
+        // Drag 1
+        val d1a = (history.applyCommand(
+            initial,
+            MoveClipCommand("c-drag", "track-v1", 200L),
+            allowCoalesce = true
+        ) as TimelineOperationResult.Success).value
+        val d1b = (history.applyCommand(
+            d1a,
+            MoveClipCommand("c-drag", "track-v1", 500L),
+            allowCoalesce = true
+        ) as TimelineOperationResult.Success).value
+        history.endCoalescing()
+
+        // Drag 2 on the same clip
+        val d2a = (history.applyCommand(
+            d1b,
+            MoveClipCommand("c-drag", "track-v1", 900L),
+            allowCoalesce = true
+        ) as TimelineOperationResult.Success).value
+        val d2b = (history.applyCommand(
+            d2a,
+            MoveClipCommand("c-drag", "track-v1", 1_200L),
+            allowCoalesce = true
+        ) as TimelineOperationResult.Success).value
+        history.endCoalescing()
+
+        assertEquals(2, history.snapshot().undoCount)
+        assertEquals(1_200L, d2b.findClip("c-drag")!!.timelineStartMs)
+
+        val afterFirstUndo = history.undo()!!
+        assertEquals(500L, afterFirstUndo.findClip("c-drag")!!.timelineStartMs)
+
+        val afterSecondUndo = history.undo()!!
+        assertEquals(0L, afterSecondUndo.findClip("c-drag")!!.timelineStartMs)
     }
 }

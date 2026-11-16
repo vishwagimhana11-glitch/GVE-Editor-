@@ -1,7 +1,6 @@
 package com.gima.gve.rendering.media3
 
 import androidx.annotation.OptIn
-import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.transformer.Composition
@@ -158,12 +157,8 @@ object Media3TimelineMapper {
         if (activeTracks.isEmpty()) return null
 
         val sequences = activeTracks.map { track: TimelineTrack ->
-            val trackTypes = when (track.type) {
-                TrackType.VIDEO, TrackType.OVERLAY -> setOf(C.TRACK_TYPE_VIDEO, C.TRACK_TYPE_AUDIO)
-                TrackType.AUDIO -> setOf(C.TRACK_TYPE_AUDIO)
-                TrackType.TEXT -> emptySet()
-            }
-            val builder = EditedMediaItemSequence.Builder(trackTypes)
+            // Media3 1.8.0: track types are inferred from items. Revisit for Phase 4 export (leading gaps, forced audio track) before enabling MP4 export.
+            val builder = EditedMediaItemSequence.Builder()
             var cursorMs = 0L
 
             project.clipsForTrack(track.id).forEach { clip ->

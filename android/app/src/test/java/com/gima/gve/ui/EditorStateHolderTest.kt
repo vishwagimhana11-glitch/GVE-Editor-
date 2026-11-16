@@ -152,4 +152,86 @@ class EditorStateHolderTest {
 
         restoredHolder.flushAndClose()
     }
+
+    @Test
+    fun `failed delete on locked track keeps the clip selected and reports an error`() = runTest {
+        val repo = LocalFileProjectRepository(
+            projectsDir = tempFolder.newFolder("locked_delete"),
+            ioDispatcher = Dispatchers.Unconfined
+        )
+        val initial = engine.createEmptyProject("Locked Delete", projectId = "proj-locked")
+        val holder = EditorStateHolder(
+            initialProject = initial,
+            scope = backgroundScope,
+            repository = repo,
+            engine = engine,
+            idGenerator = { "l-${++seq}" }
+        )
+
+        val asset = MediaAsset(
+            id = "asset-lock",
+            uri = "content://media/external/video/media/33",
+            displayName = "Locked.mp4",
+            mediaType = MediaType.VIDEO,
+            totalDurationMs = 3_000L
+        )
+        holder.placeAssetOnTimeline(asset)
+        val clipId = holder.uiState.value.selectedClipId!!
+        holder.toggleTrackLock("track-v1")
+
+        holder.deleteSelectedClip()
+
+        assertEquals(clipId, holder.uiState.value.selectedClipId)
+        assertEquals(1, holder.uiState.value.project.clips.size)
+        assertNotNull(holder.uiState.value.lastErrorMessage)
+
+        holder.flushAndClose()
+    }
+
+    @Test
+    fun `two drag gestures on the same clip create two undo entries`() = runTest {
+        val repo = LocalFileProjectRepository(
+            projectsDir = tempFolder.newFolder("two_drags"),
+            ioDispatcher = Dispatchers.Unconfined
+        )
+        val initial = engine.createEmptyProject("Two Drags", projectId = "proj-two-drags")
+        val holder = EditorStateHolder(
+            initialProject = initial,
+            scope = backgroundScope,
+            repository = repo,
+            engine = engine,
+            idGenerator = { "d-${++seq}" }
+        )
+
+        val asset = MediaAsset(
+            id = "asset-drag",
+            uri = "content://media/external/video/media/88",
+            displayName = "Drag.mp4",
+            mediaType = MediaType.VIDEO,
+            totalDurationMs = 4_000L
+        )
+        holder.placeAssetOnTimeline(asset)
+        val clipId = holder.uiState.value.selectedClipId!!
+
+        // First drag gesture
+        holder.moveClip(clipId, "track-v1", 250L, isDragging = true)
+        holder.moveClip(clipId, "track-v1", 600L, isDragging = true)
+        holder.moveClip(clipId, "track-v1", 750L, isDragging = false)
+
+        // Second drag gesture on the same clip
+        holder.moveClip(clipId, "track-v1", 1_000L, isDragging = true)
+        holder.moveClip(clipId, "track-v1", 1_400L, isDragging = false)
+
+        // Undo count = 1 (add clip) + 2 (two separate drag moves)
+        assertEquals(3, holder.uiState.value.history.undoCount)
+        assertEquals(1_400L, holder.uiState.value.project.findClip(clipId)!!.timelineStartMs)
+
+        holder.undo()
+        assertEquals(750L, holder.uiState.value.project.findClip(clipId)!!.timelineStartMs)
+
+        holder.undo()
+        assertEquals(0L, holder.uiState.value.project.findClip(clipId)!!.timelineStartMs)
+
+        holder.flushAndClose()
+    }
 }

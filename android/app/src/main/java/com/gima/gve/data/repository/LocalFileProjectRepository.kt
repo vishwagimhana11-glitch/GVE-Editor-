@@ -6,9 +6,11 @@ import com.gima.gve.domain.repository.ProjectRepository
 import com.gima.gve.domain.repository.ProjectSummary
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,7 +36,7 @@ class LocalFileProjectRepository(
 
     private val ioMutex = Mutex()
 
-    override suspend fun saveProject(project: TimelineProject): Result<Unit> = withContext(ioDispatcher) {
+    override suspend fun saveProject(project: TimelineProject): Result<Unit> = withContext(ioDispatcher + NonCancellable) {
         ioMutex.withLock {
             runCatching {
                 if (!projectsDir.exists() && !projectsDir.mkdirs()) {
@@ -141,7 +143,7 @@ class AutosaveCoordinator(
 
     fun observe(projectFlow: Flow<TimelineProject>) {
         watchJob?.cancel()
-        watchJob = scope.launch {
+        watchJob = scope.launch(start = CoroutineStart.UNDISPATCHED) {
             projectFlow
                 .drop(1)
                 .distinctUntilChanged()

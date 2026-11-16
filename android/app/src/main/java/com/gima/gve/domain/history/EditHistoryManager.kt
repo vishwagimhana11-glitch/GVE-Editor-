@@ -284,7 +284,16 @@ class EditHistoryManager(
         return TimelineOperationResult.Success(nextProject)
     }
 
+    fun endCoalescing() {
+        val last = undoStack.lastOrNull() ?: return
+        if (last.coalesceKey != null) {
+            undoStack.removeLast()
+            undoStack.addLast(last.copy(coalesceKey = null))
+        }
+    }
+
     fun undo(): TimelineProject? {
+        endCoalescing()
         val entry = undoStack.removeLastOrNull() ?: return null
         redoStack.addLast(entry)
         return entry.before
@@ -292,7 +301,7 @@ class EditHistoryManager(
 
     fun redo(): TimelineProject? {
         val entry = redoStack.removeLastOrNull() ?: return null
-        undoStack.addLast(entry)
+        undoStack.addLast(entry.copy(coalesceKey = null))
         return entry.after
     }
 

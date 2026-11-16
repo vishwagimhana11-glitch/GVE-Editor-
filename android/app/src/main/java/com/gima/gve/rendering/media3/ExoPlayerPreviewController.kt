@@ -48,6 +48,9 @@ class ExoPlayerPreviewController(
         setPreviewQuality(PreviewQuality.BALANCED_720P)
     }
 
+    val isPlaybackActive: Boolean
+        get() = player.playWhenReady && player.playbackState != Player.STATE_ENDED
+
     fun setPreviewQuality(quality: PreviewQuality) {
         val params = player.trackSelectionParameters
             .buildUpon()
@@ -56,20 +59,26 @@ class ExoPlayerPreviewController(
         player.trackSelectionParameters = params
     }
 
-    fun syncProject(project: TimelineProject): ExoPlayerPlaylistMapping {
+    fun syncProject(
+        project: TimelineProject,
+        restoreTimelineMs: Long? = null
+    ): ExoPlayerPlaylistMapping {
         val mapping = Media3TimelineMapper.toPrimaryExoPlayerPlaylist(project)
         val sig = mapping.signature
         currentMapping = mapping
 
         if (sig != lastSignature) {
             lastSignature = sig
-            val wasPlaying = player.isPlaying
+            val wasPlaying = player.playWhenReady
             if (mapping.mediaItems.isEmpty()) {
                 player.stop()
                 player.clearMediaItems()
             } else {
                 player.setMediaItems(mapping.mediaItems, /* resetPosition = */ true)
                 player.prepare()
+                if (restoreTimelineMs != null) {
+                    seekToTimelineMs(restoreTimelineMs)
+                }
                 if (wasPlaying) {
                     player.play()
                 }

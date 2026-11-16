@@ -128,7 +128,11 @@ fun EditorScreen(
     }
 
     val playlistMapping = remember(state.project) {
-        previewController.syncProject(state.project)
+        Media3TimelineMapper.toPrimaryExoPlayerPlaylist(state.project)
+    }
+
+    LaunchedEffect(previewController, state.project) {
+        previewController.syncProject(state.project, restoreTimelineMs = state.playheadMs)
     }
 
     LaunchedEffect(state.previewQuality) {
@@ -158,10 +162,10 @@ fun EditorScreen(
         }
     }
 
-    // Poll ExoPlayer position into playheadMs while playing.
+    // Poll ExoPlayer position into playheadMs while playback is active (including buffering).
     LaunchedEffect(isPlaying, previewController) {
         while (isActive && isPlaying) {
-            if (!previewController.player.isPlaying) {
+            if (!previewController.isPlaybackActive) {
                 isPlaying = false
                 break
             }
@@ -215,7 +219,11 @@ fun EditorScreen(
     BackHandler(onBack = handleBack)
 
     val totalDurationMs = state.project.totalDurationMs.coerceAtLeast(1_000L)
-    val isPlayheadOnVideo = previewController.isPlayheadInsideVideoSegment(state.playheadMs)
+    val isPlayheadOnVideo = remember(playlistMapping, state.playheadMs) {
+        playlistMapping.segments.any { seg ->
+            state.playheadMs >= seg.timelineStartMs && state.playheadMs < seg.timelineEndMs
+        }
+    }
     val activeTextClip = remember(state.project, state.playheadMs) {
         state.project.clips.firstOrNull { clip ->
             val track = state.project.findTrack(clip.trackId)
@@ -244,7 +252,7 @@ fun EditorScreen(
                 state.playheadMs
             }
             previewController.play(startPos)
-            isPlaying = previewController.player.isPlaying || previewController.isPlayheadInsideVideoSegment(startPos)
+            isPlaying = previewController.isPlaybackActive
         }
     }
 
@@ -556,7 +564,7 @@ fun EditorScreen(
 
     if (state.isMediaImportOpen) {
         MediaImportSheet(
-            projectMedia = state.project.mediaPool,
+            projectMedia = state.project.mediaAssets,
             recentMedia = state.recentMedia,
             thumbnailCache = thumbnailCache,
             onDismiss = { stateHolder.setMediaImportOpen(false) },
