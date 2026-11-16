@@ -1,0 +1,6 @@
+{
+  "name": "GVE Editor",
+  "description": "Non-destructive Android video editing engine and Phase 2 timeline workbench for com.gima.gve.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
